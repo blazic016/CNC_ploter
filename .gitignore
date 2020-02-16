@@ -1,0 +1,12 @@
+*.log
+/History/*
+*.workspace
+*.xml
+*.pdsbak
+/Altium/__Previews/*
+/Altium/History/*
+/Altium/Project Logs for Projekt_Altium_CNC/*
+/Altium/Project Outputs for Projekt_Altium_CNC/*
+Projekt_Altium_CNC.PrjPCBStructure
+/Gallery/*
+gctrl exe for windows.zip
