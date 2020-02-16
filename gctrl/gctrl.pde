@@ -98,7 +98,7 @@ void keyPressed()
     gcode = null; i = 0;
     File file = null; 
     println("Loading file...");
-    port.write("Q");
+    port.write("Q"); // reset position
     selectInput("Select a file to process:", "fileSelected", file);
   }
   
