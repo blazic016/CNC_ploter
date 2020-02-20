@@ -1,0 +1,18 @@
+koristim bluetooth JDY-31-SPP
+
+1. ubaciti kod u arduino
+2. Poveyivanje
+	STATE >nista
+	RX bluetooth > 9 arduino
+	TX bluetooth > 10 arduino
+	VCC bluetooth > 5V 
+	GND bluetooth > GND
+	EN bluetooth > 3.3V
+3. KOMANDE
+	AT+VERSION
+	AT+NAME
+	AT+ORGL, reset modula na originalno
+	AT+ROLE=1 changes the ROLE of the module to MASTER, 0 will set SLAVE
+	AT+UART=9600,1,0 Changes baud rate to 9600, 1 stop bit, 0 parity
+	AT+RMAAD will release the module from any previous PAIR.
+	
