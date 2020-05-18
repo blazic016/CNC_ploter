@@ -98,11 +98,14 @@ void keyPressed()
     gcode = null; i = 0;
     File file = null; 
     println("Loading file...");
-    port.write("Q"); // reset position
     selectInput("Select a file to process:", "fileSelected", file);
   }
   
-  if (key == 'x') streaming = false;
+  if (key == 'x') {
+    port.write('Q');
+    //port.write("resetuj");
+    streaming = false;
+  }
 }
 
 void fileSelected(File selection) {

@@ -11,13 +11,16 @@
 
 #define LINE_BUFFER_LENGTH 512
 
+
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 // Servo position for Up and Down 
 const int penZUp = 85;
 const int penZDown = 60;
 
 const int mikroprekidacX = 12; 
 const int mikroprekidacY = 13;
-const int ledPin =  7;  
+const int ledica = 7;
 
 // Servo on PWM pin 6
 const int penServoPin = 6;
@@ -84,7 +87,6 @@ boolean verbose = false;
 void setup() {
   //  Setup
   Serial.begin( 9600 );
-
   
   penServo.attach(penServoPin);
   penServo.write(penZUp);
@@ -92,11 +94,11 @@ void setup() {
 
   // Decrease if necessary
   myStepperX.setSpeed(250);
-  myStepperY.setSpeed(250);
+  myStepperY.setSpeed(250);  
 
   pinMode(mikroprekidacX, INPUT);
   pinMode(mikroprekidacY, INPUT);
-  pinMode(ledPin, OUTPUT);
+  pinMode(ledica, OUTPUT);
 
   //  Set & move to initial default position
   // TBD
@@ -112,7 +114,8 @@ void setup() {
   Serial.print(Ymin); 
   Serial.print(" to "); 
   Serial.print(Ymax); 
-  Serial.println(" mm."); 
+  Serial.println(" mm.");
+  delay(1000);
 }
 
 /**********************
@@ -123,6 +126,7 @@ void loop()
   delay(200);
   char line[ LINE_BUFFER_LENGTH ];
   char c;
+  String str; 
   int lineIndex;
   bool lineIsComment, lineSemiColon;
 
@@ -130,15 +134,15 @@ void loop()
   lineSemiColon = false;
   lineIsComment = false;
 
-
-  
   while (1) {
+
+
+
 
     // Serial reception - Mostly from Grbl, added semicolon support
     while ( Serial.available()>0 ) {
       c = Serial.read();
-
-        
+   
       if (( c == '\n') || (c == '\r') ) {             // End of line reached
         if ( lineIndex > 0 ) {                        // Line is complete. Then execute!
           line[ lineIndex ] = '\0';                   // Terminate string
@@ -184,11 +188,21 @@ void loop()
           }
         }
       }
-          if (c == 'Q') {
-          Serial.println("Otvaramo fajl");
-          //digitalWrite(ledPin, HIGH);
-          Pozicioniraj();
-        }
+            if (c == 'Q') {
+            Serial.println("RESET Q");
+            delay(500);
+            resetFunc();  
+          }
+        
+  //  ne mozes ovde da citas string i char
+  //    str = Serial.readString();
+  //    if (str == "resetuj") {
+  //      Serial.println("reset R");
+  //      delay(500);
+  //      resetFunc();
+  //    }
+
+          
     }
   }
 }
@@ -212,7 +226,20 @@ void processIncomingLine( char* line, int charNB ) {
   //  Discard any other command!
 
   while( currentIndex < charNB ) {
-    switch ( line[ currentIndex++ ] ) {              // Select command, if any
+
+  // Kako ne bismo u Case G i M koristili buffer[0], buffer[1]... Napravio sam bolje resenje. 
+   int currentIndexSave = currentIndex;
+   currentIndex++;
+     int nbuffer=0;
+     while (isdigit(line[currentIndex])){
+       buffer[nbuffer] = line[ currentIndex ];
+       currentIndex++;
+       nbuffer++;
+     }
+     buffer[nbuffer] = '\0';
+  currentIndex = currentIndexSave;
+
+    switch ( line[ currentIndex++ ] ) {              // Select command, if any 
     case 'U':
       penUp(); 
       break;
@@ -220,13 +247,19 @@ void processIncomingLine( char* line, int charNB ) {
       penDown(); 
       break;
     case 'G':
-      buffer[0] = line[ currentIndex++ ];          // /!\ Dirty - Only works with 2 digit commands
-      //      buffer[1] = line[ currentIndex++ ];
-      //      buffer[2] = '\0';
-      buffer[1] = '\0';
-
+   // Serial.println("GGGGGG");
+   //   buffer[0] = line[ currentIndex++ ];          // /!\ Losa ideja
+   ////   buffer[1] = line[ currentIndex++ ];
+   ////   buffer[2] = '\0';
+   //   buffer[1] = '\0';         //Za jednu cifru koristis samo buffer[0] i buffer[1] = '\0'; 
+   
+     //Serial.println(buffer);
+     
       switch ( atoi( buffer ) ){                   // Select G command
       case 0:                                   // G00 & G01 - Movement or fast movement. Same here
+      case 90:        //G90 - Apsolutna pozicija
+        //Serial.println(buffer);
+        PozicionirajNaPocetak();
       case 1:
         // /!\ Dirty - Suppose that X is before Y
         char* indexX = strchr( line+currentIndex, 'X' );  // Get X/Y position in the string (if any)
@@ -252,20 +285,26 @@ void processIncomingLine( char* line, int charNB ) {
       }
       break;
     case 'M':
-      buffer[0] = line[ currentIndex++ ];        // /!\ Dirty - Only works with 3 digit commands
-      buffer[1] = line[ currentIndex++ ];
-      buffer[2] = line[ currentIndex++ ];
-      buffer[3] = '\0';
+ //    Serial.println("MMMMMM");
+ //     buffer[0] = line[ currentIndex++ ];        // /!\ Losa ideja
+ //     buffer[1] = line[ currentIndex++ ];         // Za M su se koristile sve 4 cifre bafera, dok za G samo 2.
+ //     buffer[2] = line[ currentIndex++ ];
+ //     buffer[3] = '\0';
+      
+     // Serial.println(buffer);
+      
       switch ( atoi( buffer ) ){
       case 300:
         {
           char* indexS = strchr( line+currentIndex, 'S' );
           float Spos = atof( indexS + 1);
           //          Serial.println("ok");
-          if (Spos == 30) { 
-            penDown(); 
+          if (Spos == 30) {
+            Serial.println("Pen DOWN");
+            penDown();
           }
           if (Spos == 50) { 
+            Serial.println("Pen UP");
             penUp(); 
           }
           break;
@@ -279,7 +318,6 @@ void processIncomingLine( char* line, int charNB ) {
       default:
         Serial.print( "Command not recognized : M");
         Serial.println( buffer );
-        Serial.println( "KRAJ");
       }
     }
   }
@@ -420,11 +458,25 @@ void penDown() {
   } 
 }
 
-int Pozicioniraj() {
-    while (digitalRead(mikroprekidacX) == HIGH) { // ako nije pozicioniran
-      myStepperX.step(-1);
+void PozicionirajNaPocetak() {
+    while(1){
+     if (digitalRead(mikroprekidacX) == LOW) {
+        Serial.println("X-osa je pozicionirana na pocetak!");
+        break;
+      } else if (digitalRead(mikroprekidacX) == HIGH) {
+        myStepperX.step(-1);
+        } else {
+          Serial.println(" X Nesto drugo je problem.");
+          }
     }
-  while (digitalRead(mikroprekidacY) == HIGH) { // ako nije pozicioniran
-      myStepperY.step(-1);
+     while(1){ 
+     if (digitalRead(mikroprekidacY) == LOW) {
+        Serial.println("X-osa je pozicionirana na pocetak!");
+        break;
+      } else if (digitalRead(mikroprekidacY) == HIGH){
+        myStepperY.step(-1);
+        } else {
+          Serial.println(" Y Nesto drugo je problem.");
+          }
     }
  }
