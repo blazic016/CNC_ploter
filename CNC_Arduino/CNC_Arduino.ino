@@ -260,7 +260,7 @@ void processIncomingLine( char* line, int charNB ) {
       case 90:        //G90 - Apsolutna pozicija
         //Serial.println(buffer);
         PozicionirajNaPocetak();
-      case 1:
+      case 1: // G1
         // /!\ Dirty - Suppose that X is before Y
         char* indexX = strchr( line+currentIndex, 'X' );  // Get X/Y position in the string (if any)
         char* indexY = strchr( line+currentIndex, 'Y' );
